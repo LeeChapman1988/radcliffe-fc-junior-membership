@@ -178,7 +178,7 @@ def generate_card_image(child, photo_path, output_folder, card_number):
     draw = ImageDraw.Draw(img)
 
     # Fonts
-  from PIL import Image, ImageDraw, ImageFont
+ 
 ...
 # Safe font loading – works on Render too
 try:
