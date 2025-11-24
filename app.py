@@ -178,14 +178,20 @@ def generate_card_image(child, photo_path, output_folder, card_number):
     draw = ImageDraw.Draw(img)
 
     # Fonts
-    try:
-        font_large = ImageFont.truetype("arial.ttf", 36)
-        font_medium = ImageFont.truetype("arial.ttf", 26)
-        font_small = ImageFont.truetype("arial.ttf", 20)
-    except IOError:
-        font_large = ImageFont.load_default()
-        font_medium = ImageFont.load_default()
-        font_small = ImageFont.load_default()
+  from PIL import Image, ImageDraw, ImageFont
+...
+# Safe font loading – works on Render too
+try:
+    # DejaVu fonts are bundled with Pillow and available in Linux containers
+    title_font = ImageFont.truetype("DejaVuSans-Bold.ttf", 40)
+    label_font = ImageFont.truetype("DejaVuSans-Bold.ttf", 28)
+    small_font = ImageFont.truetype("DejaVuSans.ttf", 22)
+except OSError:
+    # Fallback if fonts can't be loaded for any reason
+    print("⚠️ Could not load TTF fonts, using default PIL font.")
+    title_font = label_font = small_font = ImageFont.load_default()
+
+       
 
     # Border
     border_color = (0, 0, 0)
