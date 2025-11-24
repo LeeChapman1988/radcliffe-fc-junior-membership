@@ -1,34 +1,41 @@
 {% extends "base.html" %}
-{% block content %}
-<h2>My Children & Applications</h2>
 
-<a href="{{ url_for('apply') }}" class="btn btn-success mb-3">Apply for a Membership Card</a>
+{% block title %}Dashboard - Radcliffe Football Club Membership{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">My Memberships</h2>
 
 {% if children %}
   <div class="row">
-  {% for child in children %}
-    <div class="col-md-4">
-      <div class="card mb-3">
-        <div class="card-body">
-          <h5 class="card-title">{{ child.full_name }}</h5>
-          <p class="card-text">DOB: {{ child.date_of_birth.strftime("%d/%m/%Y") }}</p>
-          {% if child.card %}
-            <p><strong>Card issued:</strong> {{ child.card.issued_at.strftime("%d/%m/%Y") }}</p>
-            <a href="{{ url_for('card_file', filename=child.card.card_image_filename) }}"
-               target="_blank" class="btn btn-sm btn-primary">
-              View / Download Card
-            </a>
-          {% else %}
-            {% for app in child.applications %}
-              <p>Status: {{ app.status|capitalize }}</p>
-            {% endfor %}
-          {% endif %}
+    {% for child in children %}
+      <div class="col-md-4 mb-4">
+        <div class="card h-100">
+          <div class="card-body">
+            <h5 class="card-title">{{ child.full_name }}</h5>
+            <p class="card-text">DOB: {{ child.date_of_birth.strftime("%d/%m/%Y") }}</p>
+            {% if child.card %}
+              <p><strong>Card number:</strong> {{ child.card.card_number }}</p>
+              <a href="{{ url_for('card_file', filename=child.card.card_image_filename) }}"
+                 target="_blank" class="btn btn-sm btn-primary">
+                View / Download Card
+              </a>
+            {% else %}
+              {% for app in child.applications %}
+                <p>Status: {{ app.status|capitalize }}</p>
+              {% else %}
+                <p>No application submitted yet.</p>
+              {% endfor %}
+            {% endif %}
+          </div>
         </div>
       </div>
-    </div>
-  {% endfor %}
+    {% endfor %}
   </div>
 {% else %}
-  <p>No applications yet.</p>
+  <p>You have not added any children yet.</p>
 {% endif %}
+
+<div class="mt-4">
+  <a href="{{ url_for('apply') }}" class="btn btn-success">Apply for a New Membership</a>
+</div>
 {% endblock %}
