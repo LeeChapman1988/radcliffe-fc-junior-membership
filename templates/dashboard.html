@@ -1,30 +1,45 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard - Radcliffe Football Club Membership{% endblock %}
-
 {% block content %}
-<h2 class="mb-4">My Memberships</h2>
+<h2>My Children</h2>
 
 {% if children %}
   <div class="row">
     {% for child in children %}
-      <div class="col-md-4 mb-4">
-        <div class="card h-100">
+      <div class="col-md-6 mb-4">
+        <div class="card">
           <div class="card-body">
             <h5 class="card-title">{{ child.full_name }}</h5>
-            <p class="card-text">DOB: {{ child.date_of_birth.strftime("%d/%m/%Y") }}</p>
+            <p class="card-text">
+              <strong>Date of birth:</strong>
+              {{ child.date_of_birth.strftime("%d/%m/%Y") if child.date_of_birth else "Not set" }}<br>
+              <strong>Team:</strong> {{ child.team or "Not set" }}
+            </p>
+
             {% if child.card %}
               <p><strong>Card number:</strong> {{ child.card.card_number }}</p>
-              <a href="{{ url_for('card_file', filename=child.card.card_image_filename) }}"
-                 target="_blank" class="btn btn-sm btn-primary">
-                View / Download Card
-              </a>
+              <p>
+                <a href="{{ url_for('card_image', filename=child.card.card_image_filename) }}"
+                   target="_blank">
+                  View Card
+                </a>
+              </p>
             {% else %}
-              {% for app in child.applications %}
-                <p>Status: {{ app.status|capitalize }}</p>
-              {% else %}
-                <p>No application submitted yet.</p>
-              {% endfor %}
+              <p>No card generated yet.</p>
+            {% endif %}
+
+            {% if child.applications %}
+              <h6>Applications:</h6>
+              <ul class="list-unstyled">
+                {% for app in child.applications %}
+                  <li>
+                    Submitted on {{ app.created_at.strftime("%d/%m/%Y") }} —
+                    Status: {{ app.status }}
+                  </li>
+                {% endfor %}
+              </ul>
+            {% else %}
+              <p>No applications submitted yet for this child.</p>
             {% endif %}
           </div>
         </div>
@@ -32,10 +47,10 @@
     {% endfor %}
   </div>
 {% else %}
-  <p>You have not added any children yet.</p>
+  <p>You have not submitted any applications yet.</p>
 {% endif %}
 
-<div class="mt-4">
-  <a href="{{ url_for('apply') }}" class="btn btn-success">Apply for a New Membership</a>
-</div>
+<a href="{{ url_for('apply') }}" class="btn btn-primary mt-3">
+  Submit a new membership card application
+</a>
 {% endblock %}

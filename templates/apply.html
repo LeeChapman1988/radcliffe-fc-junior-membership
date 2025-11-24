@@ -1,36 +1,78 @@
 {% extends "base.html" %}
+
 {% block content %}
-<h2>Apply for a Radcliffe FC Membership Card</h2>
+<div class="row justify-content-center">
+  <div class="col-md-8">
+    <h2>Apply for a Membership Card</h2>
+    <p>
+      Please complete the details below to apply for a Radcliffe FC Junior membership card
+      for your child for Season 2025/2026.
+    </p>
 
-<form method="post" enctype="multipart/form-data">
-  {{ form.hidden_tag() }}
+    <form method="POST"
+          action="{{ url_for('apply') }}"
+          enctype="multipart/form-data">
+      {{ form.hidden_tag() }}
 
-  <div class="mb-3">
-    {{ form.full_name.label(class="form-label") }}
-    {{ form.full_name(class="form-control") }}
+      <div class="mb-3">
+        {{ form.full_name.label(class_="form-label") }}
+        {{ form.full_name(class_="form-control", placeholder="Child's full name") }}
+        {% for error in form.full_name.errors %}
+          <div class="text-danger small">{{ error }}</div>
+        {% endfor %}
+      </div>
+
+      <div class="mb-3">
+        {{ form.date_of_birth.label(class_="form-label") }}
+        {{ form.date_of_birth(class_="form-control", placeholder="DD/MM/YYYY") }}
+        {% for error in form.date_of_birth.errors %}
+          <div class="text-danger small">{{ error }}</div>
+        {% endfor %}
+      </div>
+
+      <div class="mb-3">
+        {{ form.team.label(class_="form-label") }}
+        {{ form.team(class_="form-control", placeholder="e.g. U10 Tigers") }}
+        {% for error in form.team.errors %}
+          <div class="text-danger small">{{ error }}</div>
+        {% endfor %}
+      </div>
+
+      <div class="mb-3">
+        {{ form.photo.label(class_="form-label") }}
+        {{ form.photo(class_="form-control") }}
+        <div class="form-text">
+          Upload a clear photo of your child (passport-style if possible).
+        </div>
+        {% for error in form.photo.errors %}
+          <div class="text-danger small">{{ error }}</div>
+        {% endfor %}
+      </div>
+
+      <div class="mb-3">
+        {{ form.id_document.label(class_="form-label") }}
+        {{ form.id_document(class_="form-control") }}
+        <div class="form-text">
+          Upload a passport, birth certificate, or other proof of identity if requested.
+        </div>
+        {% for error in form.id_document.errors %}
+          <div class="text-danger small">{{ error }}</div>
+        {% endfor %}
+      </div>
+
+      <div class="form-check mb-3">
+        {{ form.consent(class_="form-check-input") }}
+        {{ form.consent.label(class_="form-check-label") }}
+        {% for error in form.consent.errors %}
+          <div class="text-danger small">{{ error }}</div>
+        {% endfor %}
+      </div>
+
+      <div class="mb-3">
+        {{ form.submit(class_="btn btn-primary") }}
+        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
+      </div>
+    </form>
   </div>
-
-  <div class="mb-3">
-    {{ form.date_of_birth.label(class="form-label") }}
-    {{ form.date_of_birth(class="form-control") }}
-    <div class="form-text">Format: YYYY-MM-DD</div>
-  </div>
-
-  <div class="mb-3">
-    {{ form.photo.label(class="form-label") }}
-    {{ form.photo(class="form-control") }}
-  </div>
-
-  <div class="mb-3">
-    {{ form.id_document.label(class="form-label") }}
-    {{ form.id_document(class="form-control") }}
-  </div>
-
-  <div class="form-check mb-3">
-    {{ form.consent(class="form-check-input") }}
-    {{ form.consent.label(class="form-check-label") }}
-  </div>
-
-  {{ form.submit(class="btn btn-primary") }}
-</form>
+</div>
 {% endblock %}

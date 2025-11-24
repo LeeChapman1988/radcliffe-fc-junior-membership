@@ -1,11 +1,42 @@
 {% extends "base.html" %}
+
 {% block content %}
-<div class="text-center">
-  <h1 class="mb-3">Radcliffe Football Club Membership Cards</h1>
-  <p class="lead">
-    Register as a parent/guardian and apply for a free Radcliffe FC membership card
-    for your child. Cards are approved by the club and emailed to you once ready.
-  </p>
-  <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg mt-3">Get Started</a>
+<div class="row">
+  <div class="col-md-8">
+    <h1>Radcliffe FC Junior Membership</h1>
+    <p class="lead">
+      Welcome to the Radcliffe FC Junior Membership Card portal for Season 2025/2026.
+    </p>
+
+    <p>
+      This system allows parents and carers to:
+    </p>
+    <ul>
+      <li>Create a membership account</li>
+      <li>Submit membership card applications for their children</li>
+      <li>Download and print approved membership cards (driving licence sized)</li>
+    </ul>
+
+    <p>
+      If you already have an account, please <a href="{{ url_for('login') }}">log in</a>.  
+      New to the system? <a href="{{ url_for('register') }}">Register here</a>.
+    </p>
+  </div>
+
+  <div class="col-md-4">
+    <div class="card mb-3">
+      <div class="card-header">
+        Quick Links
+      </div>
+      <div class="card-body">
+        <a href="{{ url_for('register') }}" class="btn btn-primary w-100 mb-2">
+          Create Parent/Carer Account
+        </a>
+        <a href="{{ url_for('login') }}" class="btn btn-outline-secondary w-100">
+          Login
+        </a>
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}

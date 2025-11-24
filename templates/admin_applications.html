@@ -1,34 +1,37 @@
 {% extends "base.html" %}
-{% block content %}
-<h2>Pending Applications</h2>
 
-{% if applications %}
-  <table class="table table-striped">
-    <thead>
-      <tr>
-        <th>ID</th>
-        <th>Child</th>
-        <th>Parent</th>
-        <th>Submitted</th>
-        <th></th>
-      </tr>
-    </thead>
-    <tbody>
+{% block content %}
+<h2>All Applications</h2>
+
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Child</th>
+      <th>Team</th>
+      <th>Submitted</th>
+      <th>Status</th>
+      <th>Parent</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
     {% for app in applications %}
       <tr>
         <td>{{ app.id }}</td>
-        <td>{{ app.child.full_name }}</td>
-        <td>{{ app.child.parent.email }}</td>
+        <td>{{ app.full_name }}</td>
+        <td>{{ app.team }}</td>
         <td>{{ app.created_at.strftime("%d/%m/%Y %H:%M") }}</td>
+        <td>{{ app.status }}</td>
+        <td>{{ app.parent_email }}</td>
         <td>
-          <a href="{{ url_for('admin_application_detail', app_id=app.id) }}"
-             class="btn btn-sm btn-primary">View</a>
+          <a href="{{ url_for('admin_application_detail', application_id=app.id) }}"
+             class="btn btn-sm btn-primary">
+            View
+          </a>
         </td>
       </tr>
     {% endfor %}
-    </tbody>
-  </table>
-{% else %}
-  <p>No pending applications.</p>
-{% endif %}
+  </tbody>
+</table>
 {% endblock %}
