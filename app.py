@@ -262,11 +262,11 @@ def generate_card_image(child, photo_path, output_folder, card_number):
 
     return output_filename
 
-
 def send_card_email(to_email, child, card_image_path, card_number):
     """
     Send the generated card to the parent by email as an attachment.
     Uses basic SMTP settings from environment variables.
+    If anything goes wrong, log it but do NOT crash the request.
     """
     smtp_host = os.environ.get("SMTP_HOST")
     smtp_port = int(os.environ.get("SMTP_PORT", "587"))
@@ -297,21 +297,29 @@ Radcliffe Football Club
 """
     msg.set_content(body)
 
-    with open(card_image_path, "rb") as f:
-        img_data = f.read()
-    msg.add_attachment(
-        img_data,
-        maintype="image",
-        subtype="png",
-        filename=os.path.basename(card_image_path),
-    )
+    try:
+        with open(card_image_path, "rb") as f:
+            img_data = f.read()
+        msg.add_attachment(
+            img_data,
+            maintype="image",
+            subtype="png",
+            filename=os.path.basename(card_image_path),
+        )
 
-    with smtplib.SMTP(smtp_host, smtp_port) as server:
-        server.starttls()
-        server.login(smtp_user, smtp_password)
-        server.send_message(msg)
+        # NOTE: add a timeout so the worker doesn't hang forever
+        with smtplib.SMTP(smtp_host, smtp_port, timeout=15) as server:
+            server.starttls()
+            server.login(smtp_user, smtp_password)
+            server.send_message(msg)
 
-    print(f"✅ Sent card email to {to_email}")
+        print(f"✅ Sent card email to {to_email}")
+
+    except Exception as e:
+        # Log error but don't blow up the request
+        print(f"❌ Failed to send email to {to_email}: {e}")
+
+
 
 
 # -------------------
@@ -487,15 +495,7 @@ def uploaded_file(filename):
 def card_file(filename):
     return send_from_directory(app.config["CARD_FOLDER"], filename)
 
-@app.route("/make-me-admin-once")
-def make_me_admin_once():
-    # TEMP: promote Lee to admin on Render. REMOVE after use.
-    user = User.query.filter_by(email="lee.chapman@radcliffejuniors.com").first()
-    if user:
-        user.is_admin = True
-        db.session.commit()
-        return "You are now admin. REMOVE this route from app.py!"
-    return "User not found. Register with this email first."
+
 
 
 if __name__ == "__main__":
