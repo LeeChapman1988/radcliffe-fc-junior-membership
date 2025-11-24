@@ -19,13 +19,13 @@
     {% for app in applications %}
       <tr>
         <td>{{ app.id }}</td>
-        <td>{{ app.full_name }}</td>
-        <td>{{ app.team }}</td>
+        <td>{{ app.child.full_name }}</td>
+        <td>Not recorded</td>
         <td>{{ app.created_at.strftime("%d/%m/%Y %H:%M") }}</td>
         <td>{{ app.status }}</td>
-        <td>{{ app.parent_email }}</td>
+        <td>{{ app.child.parent.email }}</td>
         <td>
-          <a href="{{ url_for('admin_application_detail', application_id=app.id) }}"
+          <a href="{{ url_for('admin_application_detail', app_id=app.id) }}"
              class="btn btn-sm btn-primary">
             View
           </a>

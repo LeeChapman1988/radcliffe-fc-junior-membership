@@ -19,7 +19,7 @@
 
       <div class="mb-3">
         {{ form.password.label(class_="form-label") }}
-        {{ form.password(class_="form-control", placeholder="Create a password") }}
+        {{ form.password(class_="form-control", placeholder="Enter a password (min 6 characters)") }}
         {% for error in form.password.errors %}
           <div class="text-danger small">{{ error }}</div>
         {% endfor %}

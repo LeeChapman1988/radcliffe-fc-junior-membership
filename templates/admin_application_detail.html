@@ -1,31 +1,30 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h2>Application #{{ app.id }}</h2>
+<h2>Application #{{ application.id }}</h2>
 
 <div class="row">
   <div class="col-md-6">
     <h4>Child details</h4>
-    <p><strong>Name:</strong> {{ app.full_name }}</p>
-    <p><strong>Date of birth:</strong> {{ app.date_of_birth.strftime("%d/%m/%Y") }}</p>
-    <p><strong>Team:</strong> {{ app.team }}</p>
-    <p><strong>Parent email:</strong> {{ app.parent_email }}</p>
+    <p><strong>Name:</strong> {{ child.full_name }}</p>
+    <p><strong>Date of birth:</strong> {{ child.date_of_birth.strftime("%d/%m/%Y") }}</p>
+    <p><strong>Parent email:</strong> {{ child.parent.email }}</p>
 
     <h4>Images</h4>
     <p>
       <strong>Child photo:</strong><br>
-      <img src="{{ url_for('uploaded_file', filename=app.child_photo_image) }}"
+      <img src="{{ url_for('uploaded_file', filename=application.photo_filename) }}"
            alt="Child photo"
            class="img-fluid mb-3">
     </p>
 
-    {% if app.id_document_image %}
-      <p>
-        <strong>ID document:</strong><br>
-        <img src="{{ url_for('uploaded_file', filename=app.id_document_image) }}"
-             alt="ID document"
-             class="img-fluid mb-3">
-      </p>
+    {% if application.id_document_filename %}
+    <p>
+      <strong>ID document:</strong><br>
+      <img src="{{ url_for('uploaded_file', filename=application.id_document_filename) }}"
+           alt="ID document"
+           class="img-fluid mb-3">
+    </p>
     {% endif %}
   </div>
 
@@ -38,12 +37,15 @@
                class="form-control"
                id="card_number"
                name="card_number"
-               value="{{ app.child.card.card_number if app.child and app.child.card else '' }}"
+               value="{{ child.card.card_number if child.card else '' }}"
                placeholder="e.g. RJ-000123">
       </div>
 
-      <button type="submit" class="btn btn-success">
+      <button type="submit" name="action" value="approve" class="btn btn-success">
         Approve &amp; Generate Card
+      </button>
+      <button type="submit" name="action" value="reject" class="btn btn-danger ms-2">
+        Reject Application
       </button>
       <a href="{{ url_for('admin_applications') }}" class="btn btn-secondary ms-2">
         Back

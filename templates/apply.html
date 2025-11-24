@@ -31,18 +31,10 @@
       </div>
 
       <div class="mb-3">
-        {{ form.team.label(class_="form-label") }}
-        {{ form.team(class_="form-control", placeholder="e.g. U10 Tigers") }}
-        {% for error in form.team.errors %}
-          <div class="text-danger small">{{ error }}</div>
-        {% endfor %}
-      </div>
-
-      <div class="mb-3">
         {{ form.photo.label(class_="form-label") }}
         {{ form.photo(class_="form-control") }}
         <div class="form-text">
-          Upload a clear photo of your child (passport-style if possible).
+          Please upload a clear head-and-shoulders photo of your child.
         </div>
         {% for error in form.photo.errors %}
           <div class="text-danger small">{{ error }}</div>

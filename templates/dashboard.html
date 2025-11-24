@@ -10,7 +10,7 @@
                 <h3>{{ child.full_name }}</h3>
 
                 <p><strong>Date of Birth:</strong> {{ child.date_of_birth.strftime("%d/%m/%Y") }}</p>
-                <p><strong>Team / Group:</strong> {{ child.team_name }}</p>
+                <p><strong>Team / Group:</strong> Not recorded</p>
 
                 {% if child.applications %}
                     <h4>Membership Application</h4>
@@ -21,7 +21,7 @@
                             <p><strong>Card number:</strong> {{ child.card.card_number }}</p>
                             <p>
                                 <strong>Download card:</strong>
-                                <a href="{{ url_for('download_card', card_filename=child.card.card_image_filename) }}" target="_blank">
+                                <a href="{{ url_for('card_file', filename=child.card.card_image_filename) }}" target="_blank">
                                     Download membership card
                                 </a>
                             </p>

@@ -12,7 +12,7 @@ from flask_login import (
     logout_user, current_user
 )
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, DateField, FileField, SubmitField
+from wtforms import StringField, PasswordField, DateField, FileField, SubmitField, BooleanField
 from wtforms.validators import DataRequired, Email, Length, EqualTo
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
@@ -132,7 +132,7 @@ class RegisterForm(FlaskForm):
         "Password",
         validators=[DataRequired(), Length(min=6)]
     )
-    password2 = PasswordField(
+    confirm_password = PasswordField(
         "Confirm Password",
         validators=[DataRequired(), EqualTo("password", message="Passwords must match")]
     )
@@ -148,6 +148,7 @@ class LoginForm(FlaskForm):
         "Password",
         validators=[DataRequired()]
     )
+    remember_me = BooleanField("Remember Me")
     submit = SubmitField("Login")
 
 
@@ -163,6 +164,10 @@ class ChildApplicationForm(FlaskForm):
     )
     photo = FileField("Child Photo", validators=[DataRequired()])
     id_document = FileField("ID / Proof of Age", validators=[DataRequired()])
+    consent = BooleanField(
+        "I confirm the details are correct and I have parental responsibility for this child.",
+        validators=[DataRequired(message="You must confirm consent to proceed.")]
+    )
     submit = SubmitField("Submit Application")
 
 # -------------------
@@ -380,7 +385,8 @@ def login():
     if form.validate_on_submit():
         user = User.query.filter_by(email=form.email.data.lower().strip()).first()
         if user and user.check_password(form.password.data):
-            login_user(user)
+            remember = getattr(form, "remember_me", None)
+            login_user(user, remember=bool(remember.data) if remember is not None else False)
             flash("Logged in successfully.", "success")
             next_page = request.args.get("next")
             return redirect(next_page or url_for("dashboard"))
@@ -478,8 +484,8 @@ def admin_application_detail(app_id):
             if application.status != "approved":
                 application.status = "approved"
 
-                # Generate card image
-                card_number = f"RJ-{application.id:06d}"
+                # Choose card number: from form if provided, otherwise auto
+                card_number = request.form.get("card_number") or f"RJ-{application.id:06d}"
                 photo_path = os.path.join(app.config["UPLOAD_FOLDER"], application.photo_filename)
                 card_image_filename = generate_card_image(
                     child,
