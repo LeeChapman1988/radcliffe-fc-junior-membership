@@ -65,29 +65,24 @@ def load_user(user_id):
 # ---------------------- CARD GENERATOR ----------------------
 
 def generate_card_image(child_name, card_number, photo_path):
-    """Generates the membership card PNG"""
 
     output_filename = f"card_{card_number}.png"
     output_path = os.path.join(CARD_FOLDER, output_filename)
 
-    # Canvas
     card = Image.new("RGB", (1011, 638), "white")
     draw = ImageDraw.Draw(card)
 
-    # Load photo
     if os.path.exists(photo_path):
         user_img = Image.open(photo_path).convert("RGB")
         user_img = user_img.resize((300, 400))
         card.paste(user_img, (50, 120))
 
-    # Load badge
     badge_path = "static/radcliffe_fc_badge.png"
     if os.path.exists(badge_path):
         badge = Image.open(badge_path).convert("RGBA")
         badge = badge.resize((180, 180))
         card.paste(badge, (800, 40), badge)
 
-    # FONT SETUP
     try:
         font_large = ImageFont.truetype("arial.ttf", 48)
         font_medium = ImageFont.truetype("arial.ttf", 38)
@@ -97,14 +92,12 @@ def generate_card_image(child_name, card_number, photo_path):
         font_medium = ImageFont.load_default()
         font_small = ImageFont.load_default()
 
-    # TEXT
     draw.text((400, 80), "RADCLIFFE FOOTBALL CLUB", fill="black", font=font_large)
     draw.text((400, 180), f"Member: {child_name}", fill="black", font=font_medium)
     draw.text((400, 260), f"Card No: {card_number}", fill="black", font=font_medium)
     draw.text((400, 340), "Season: 2024 / 2025", fill="black", font=font_small)
     draw.text((400, 420), "This card must be shown on request.", fill="black", font=font_small)
 
-    # Save
     card.save(output_path)
     return output_filename
 
@@ -127,14 +120,12 @@ def send_card_email(to_email, child_name, card_path, card_number):
     )
 
     with open(card_path, "rb") as f:
-        card_data = f.read()
-
-    msg.add_attachment(
-        card_data,
-        maintype="image",
-        subtype="png",
-        filename=os.path.basename(card_path)
-    )
+        msg.add_attachment(
+            f.read(),
+            maintype="image",
+            subtype="png",
+            filename=os.path.basename(card_path)
+        )
 
     with smtplib.SMTP(smtp_host, smtp_port) as server:
         server.starttls()
@@ -175,7 +166,6 @@ def register():
 def login():
 
     if request.method == "POST":
-
         email = request.form["email"]
         password = request.form["password"]
 
@@ -188,6 +178,7 @@ def login():
         login_user(user)
         return redirect(url_for("dashboard"))
 
+    # FIX: Do NOT pass a WTForms form → your template will not use form.hidden_tag()
     return render_template("login.html")
 
 
@@ -208,6 +199,7 @@ def dashboard():
 @login_required
 def apply():
     if request.method == "POST":
+
         parent_email = request.form["parent_email"]
         parent_name = request.form["parent_name"]
         child_name = request.form["child_name"]
@@ -235,7 +227,6 @@ def apply():
 @app.route("/admin/applications")
 @login_required
 def admin_applications():
-
     if not current_user.is_admin:
         flash("Not authorised.")
         return redirect(url_for("dashboard"))
@@ -247,7 +238,6 @@ def admin_applications():
 @app.route("/admin/application/<int:app_id>")
 @login_required
 def admin_application_detail(app_id):
-
     if not current_user.is_admin:
         flash("Not authorised.")
         return redirect(url_for("dashboard"))
@@ -266,16 +256,13 @@ def admin_approve(app_id):
 
     app_row = Application.query.get_or_404(app_id)
 
-    # Generate card number
     card_number = f"RJ-{str(app_row.id).zfill(6)}"
     app_row.card_number = card_number
 
-    # Generate card image
     photo_path = os.path.join(UPLOAD_FOLDER, app_row.photo_filename)
     filename = generate_card_image(app_row.child_name, card_number, photo_path)
     app_row.card_filename = filename
 
-    # Email card
     card_path = os.path.join(CARD_FOLDER, filename)
     send_card_email(app_row.parent_email, app_row.child_name, card_path, card_number)
 
@@ -285,8 +272,6 @@ def admin_approve(app_id):
     flash("Card generated & emailed!")
     return redirect(url_for("admin_applications"))
 
-
-# ---------------------- STATIC FILE SERVING ----------------------
 
 @app.route("/uploads/<path:filename>")
 def uploaded_file(filename):
@@ -298,8 +283,6 @@ def cards_file(filename):
     return send_from_directory(CARD_FOLDER, filename)
 
 
-# ---------------------- TEMP ADMIN ROUTE ----------------------
-# Remove after setup
 @app.route("/make-me-admin-once")
 def make_admin_once():
     user = User.query.first()
@@ -309,8 +292,6 @@ def make_admin_once():
         return "Admin granted once."
     return "No users."
 
-
-# ---------------------- RUN ----------------------
 
 if __name__ == "__main__":
     app.run(debug=True)
