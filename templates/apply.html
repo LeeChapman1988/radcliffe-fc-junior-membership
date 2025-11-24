@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Apply for a Radcliffe FC Membership Card</h2>
+
+<form method="post" enctype="multipart/form-data">
+  {{ form.hidden_tag() }}
+
+  <div class="mb-3">
+    {{ form.full_name.label(class="form-label") }}
+    {{ form.full_name(class="form-control") }}
+  </div>
+
+  <div class="mb-3">
+    {{ form.date_of_birth.label(class="form-label") }}
+    {{ form.date_of_birth(class="form-control") }}
+    <div class="form-text">Format: YYYY-MM-DD</div>
+  </div>
+
+  <div class="mb-3">
+    {{ form.photo.label(class="form-label") }}
+    {{ form.photo(class="form-control") }}
+  </div>
+
+  <div class="mb-3">
+    {{ form.id_document.label(class="form-label") }}
+    {{ form.id_document(class="form-control") }}
+  </div>
+
+  <div class="form-check mb-3">
+    {{ form.consent(class="form-check-input") }}
+    {{ form.consent.label(class="form-check-label") }}
+  </div>
+
+  {{ form.submit(class="btn btn-primary") }}
+</form>
+{% endblock %}
