@@ -487,6 +487,16 @@ def uploaded_file(filename):
 def card_file(filename):
     return send_from_directory(app.config["CARD_FOLDER"], filename)
 
+@app.route("/make-me-admin-once")
+def make_me_admin_once():
+    # TEMP: promote Lee to admin on Render. REMOVE after use.
+    user = User.query.filter_by(email="lee.chapman@radcliffejuniors.com").first()
+    if user:
+        user.is_admin = True
+        db.session.commit()
+        return "You are now admin. REMOVE this route from app.py!"
+    return "User not found. Register with this email first."
+
 
 if __name__ == "__main__":
     app.run(debug=True)
