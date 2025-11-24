@@ -4,53 +4,42 @@
 <h2>My Children</h2>
 
 {% if children %}
-  <div class="row">
     {% for child in children %}
-      <div class="col-md-6 mb-4">
-        <div class="card">
-          <div class="card-body">
-            <h5 class="card-title">{{ child.full_name }}</h5>
-            <p class="card-text">
-              <strong>Date of birth:</strong>
-              {{ child.date_of_birth.strftime("%d/%m/%Y") if child.date_of_birth else "Not set" }}<br>
-              <strong>Team:</strong> {{ child.team or "Not set" }}
-            </p>
+        <div class="card mb-3">
+            <div class="card-body">
+                <h3>{{ child.full_name }}</h3>
 
-            {% if child.card %}
-              <p><strong>Card number:</strong> {{ child.card.card_number }}</p>
-              <p>
-                <a href="{{ url_for('card_image', filename=child.card.card_image_filename) }}"
-                   target="_blank">
-                  View Card
-                </a>
-              </p>
-            {% else %}
-              <p>No card generated yet.</p>
-            {% endif %}
+                <p><strong>Date of Birth:</strong> {{ child.date_of_birth.strftime("%d/%m/%Y") }}</p>
+                <p><strong>Team / Group:</strong> {{ child.team_name }}</p>
 
-            {% if child.applications %}
-              <h6>Applications:</h6>
-              <ul class="list-unstyled">
-                {% for app in child.applications %}
-                  <li>
-                    Submitted on {{ app.created_at.strftime("%d/%m/%Y") }} —
-                    Status: {{ app.status }}
-                  </li>
-                {% endfor %}
-              </ul>
-            {% else %}
-              <p>No applications submitted yet for this child.</p>
-            {% endif %}
-          </div>
+                {% if child.applications %}
+                    <h4>Membership Application</h4>
+                    {% for application in child.applications %}
+                        <p><strong>Status:</strong> {{ application.status }}</p>
+
+                        {% if application.status == 'approved' and child.card %}
+                            <p><strong>Card number:</strong> {{ child.card.card_number }}</p>
+                            <p>
+                                <strong>Download card:</strong>
+                                <a href="{{ url_for('download_card', card_filename=child.card.card_image_filename) }}" target="_blank">
+                                    Download membership card
+                                </a>
+                            </p>
+                        {% elif application.status == 'pending' %}
+                            <p>Your application is currently being reviewed.</p>
+                        {% elif application.status == 'rejected' %}
+                            <p>Your application has been rejected. Please contact the club for more information.</p>
+                        {% endif %}
+                    {% endfor %}
+                {% else %}
+                    <p>No membership applications found for this child.</p>
+                    <a class="btn btn-primary" href="{{ url_for('apply') }}">Apply for membership</a>
+                {% endif %}
+            </div>
         </div>
-      </div>
     {% endfor %}
-  </div>
 {% else %}
-  <p>You have not submitted any applications yet.</p>
+    <p>You have not added any children yet.</p>
 {% endif %}
 
-<a href="{{ url_for('apply') }}" class="btn btn-primary mt-3">
-  Submit a new membership card application
-</a>
 {% endblock %}
