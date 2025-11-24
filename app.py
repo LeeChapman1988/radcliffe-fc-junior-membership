@@ -107,7 +107,7 @@ class Card(db.Model):
     child_id = db.Column(db.Integer, db.ForeignKey("child.id"), nullable=False)
     card_number = db.Column(db.String(50), unique=True, nullable=False)
     card_image_filename = db.Column(db.String(255), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    # created_at removed to match existing DB schema
 
 # -------------------
 # Login manager
