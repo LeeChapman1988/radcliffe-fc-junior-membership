@@ -1,8 +1,3 @@
-# =======================
-#  FULL SAFE APP.PY
-#  EMAIL FAILS WON'T CRASH
-# =======================
-
 import os
 import secrets
 from datetime import datetime
@@ -26,11 +21,6 @@ import smtplib
 from email.message import EmailMessage
 import qrcode
 
-# ====================================
-#  EMAIL SEND OPTIONAL ON SERVER
-# ====================================
-ENABLE_EMAIL = os.environ.get("ENABLE_EMAIL", "0") == "1"
-
 # -------------------
 # Config & Setup
 # -------------------
@@ -38,7 +28,7 @@ ENABLE_EMAIL = os.environ.get("ENABLE_EMAIL", "0") == "1"
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads")
 CARD_FOLDER = os.path.join(BASE_DIR, "cards")
-STATIC_FOLDER = os.path.join(BASE_DIR, "static")
+STATIC_FOLDER = os.path.join(BASE_DIR, "static")  # for badge
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(CARD_FOLDER, exist_ok=True)
@@ -53,6 +43,7 @@ def create_app():
         f"sqlite:///{os.path.join(BASE_DIR, 'app.db')}"
     )
 
+    # Fix for old postgres:// URLs (Render)
     if app.config["SQLALCHEMY_DATABASE_URI"].startswith("postgres://"):
         app.config["SQLALCHEMY_DATABASE_URI"] = app.config["SQLALCHEMY_DATABASE_URI"].replace(
             "postgres://", "postgresql://", 1
@@ -75,10 +66,10 @@ db = SQLAlchemy()
 login_manager = LoginManager()
 login_manager.login_view = "login"
 
-
 # -------------------
 # Models
 # -------------------
+
 
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
@@ -109,7 +100,7 @@ class Application(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     child_id = db.Column(db.Integer, db.ForeignKey("child.id"), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    status = db.Column(db.String(20), default="pending")
+    status = db.Column(db.String(20), default="pending")  # pending / approved / rejected
     photo_filename = db.Column(db.String(255), nullable=False)
     id_document_filename = db.Column(db.String(255), nullable=False)
     notes = db.Column(db.Text)
@@ -153,7 +144,7 @@ class ChildApplicationForm(FlaskForm):
     full_name = StringField("Child's Full Name", validators=[DataRequired()])
     date_of_birth = DateField("Date of Birth", validators=[DataRequired()], format="%Y-%m-%d")
     photo = FileField("Photo (passport style)", validators=[DataRequired()])
-    id_document = FileField("ID Document", validators=[DataRequired()])
+    id_document = FileField("ID Document (e.g. passport, birth certificate)", validators=[DataRequired()])
     consent = BooleanField(
         "I confirm I am the parent/guardian and consent to data processing",
         validators=[DataRequired()],
@@ -162,7 +153,7 @@ class ChildApplicationForm(FlaskForm):
 
 
 # -------------------
-# Helper Functions
+# Helper functions
 # -------------------
 
 def save_uploaded_file(file_storage, folder):
@@ -175,68 +166,119 @@ def save_uploaded_file(file_storage, folder):
 
 
 def generate_card_image(child, photo_path, output_folder, card_number):
+    """
+    Generate a driving-licence style PNG card with QR code.
+
+    Physical size: approx 85.6 x 54 mm (ID-1 card) at 300 DPI.
+    """
+    # 3.37" x 2.125" at 300 dpi ≈ 1011 x 638 px
     card_width, card_height = 1011, 638
     background_color = (240, 240, 240)
+    text_color = (10, 10, 10)
 
     img = Image.new("RGB", (card_width, card_height), background_color)
     draw = ImageDraw.Draw(img)
 
+    # Fonts
     try:
         font_large = ImageFont.truetype("arial.ttf", 36)
         font_medium = ImageFont.truetype("arial.ttf", 26)
         font_small = ImageFont.truetype("arial.ttf", 20)
     except IOError:
-        font_large = font_medium = font_small = ImageFont.load_default()
+        font_large = ImageFont.load_default()
+        font_medium = ImageFont.load_default()
+        font_small = ImageFont.load_default()
 
+    # Border
     border_color = (0, 0, 0)
+    border_width = 4
     draw.rectangle(
-        [4, 4, card_width - 4, card_height - 4],
+        [border_width, border_width, card_width - border_width, card_height - border_width],
         outline=border_color,
-        width=4,
+        width=border_width,
     )
 
-    photo = Image.open(photo_path).convert("RGB")
-    photo = photo.resize((260, 340))
-    img.paste(photo, (40, 120))
+    # Layout areas
+    margin = 40
 
-    # Text block
-    text_x = 340
-    text_y = 60
-    draw.text((40, 30), "RADCLIFFE FOOTBALL CLUB MEMBERSHIP CARD", fill=(10, 10, 10), font=font_large)
+    # Photo area (left)
+    photo_box = (margin, margin + 40, margin + 320, card_height - margin)
+    try:
+        photo = Image.open(photo_path).convert("RGB")
+        photo = photo.resize((photo_box[2] - photo_box[0], photo_box[3] - photo_box[1]))
+        img.paste(photo, (photo_box[0], photo_box[1]))
+    except Exception as e:
+        print(f"⚠️ Could not load photo at {photo_path}: {e}")
 
-    draw.text((text_x, text_y), f"Name: {child.full_name}", fill=(10, 10, 10), font=font_medium)
-    text_y += 50
-    draw.text((text_x, text_y), f"DOB: {child.date_of_birth.strftime('%d/%m/%Y')}", fill=(10, 10, 10), font=font_medium)
-    text_y += 50
-    draw.text((text_x, text_y), f"Card No: {card_number}", fill=(10, 10, 10), font=font_medium)
-    text_y += 50
-    draw.text((text_x, text_y), "Season: 2025/26", fill=(10, 10, 10), font=font_small)
-    text_y += 70
+    # QR code (bottom-right corner-ish)
+    qr_size = 180
+    qr_data = f"RFC|{child.full_name}|{card_number}"
+    qr_img = qrcode.make(qr_data).resize((qr_size, qr_size))
+    qr_x = card_width - margin - qr_size
+    qr_y = card_height - margin - qr_size
+    img.paste(qr_img, (qr_x, qr_y))
 
-    # Badge
+    # Text – right-hand side above QR and to the right of photo
+    text_start_x = photo_box[2] + 30
+    text_y = margin + 20
+
+    # Header
+    draw.text((text_start_x, text_y), "Radcliffe Football Club", fill=text_color, font=font_large)
+    text_y += 60
+
+    # Child name
+    draw.text((text_start_x, text_y), f"Name: {child.full_name}", fill=text_color, font=font_medium)
+    text_y += 40
+
+    # DOB
+    dob_str = child.date_of_birth.strftime("%d/%m/%Y")
+    draw.text((text_start_x, text_y), f"DOB: {dob_str}", fill=text_color, font=font_medium)
+    text_y += 40
+
+    # Card number
+    draw.text((text_start_x, text_y), f"Card No: {card_number}", fill=text_color, font=font_medium)
+    text_y += 40
+
+    # Season line
+    draw.text((text_start_x, text_y), "Season: 2025/26", fill=text_color, font=font_small)
+    text_y += 70  # gap before badge
+
+    # Badge BELOW the season line
     badge_path = os.path.join(STATIC_FOLDER, "radcliffe_fc_badge.png")
     try:
         badge = Image.open(badge_path).convert("RGBA")
-        badge = badge.resize((110, 110))
-        img.paste(badge, (text_x, text_y), badge)
+        badge_height = 110
+        ratio = badge.width / badge.height
+        badge_width = int(badge_height * ratio)
+        badge = badge.resize((badge_width, badge_height))
+
+        badge_x = text_start_x
+        badge_y = text_y
+        img.paste(badge, (badge_x, badge_y), badge)
     except Exception as e:
-        print(f"⚠️ Badge load failed: {e}")
+        print(f"⚠️ Could not load badge image at {badge_path}: {e}")
 
-    # QR code
-    qr = qrcode.QRCode(box_size=4, border=1)
-    qr.add_data(card_number)
-    qr.make(fit=True)
-    qr_img = qr.make_image(fill_color="black", back_color="white").convert("RGB")
-    qr_img = qr_img.resize((160, 160))
-    img.paste(qr_img, (card_width - 200, card_height - 200))
-
+    # Save PNG with DPI set so it prints at card size
     output_filename = f"card_{card_number}.png"
-    img.save(os.path.join(output_folder, output_filename), format="PNG", dpi=(300, 300))
+    output_path = os.path.join(output_folder, output_filename)
+    img.save(output_path, format="PNG", dpi=(300, 300))
 
     return output_filename
 
 
 def send_card_email(to_email, child, card_image_path, card_number):
+    """
+    Send the generated card to the parent by email as an attachment.
+    Uses basic SMTP settings from environment variables.
+
+    Returns True if sent, False otherwise.
+    """
+
+    # Feature flag – set ENABLE_EMAIL=1 on Render when ready
+    if os.environ.get("ENABLE_EMAIL", "0") != "1":
+        print("ℹ️ Email sending disabled via ENABLE_EMAIL env var.")
+        return False
+
     smtp_host = os.environ.get("SMTP_HOST")
     smtp_port = int(os.environ.get("SMTP_PORT", "587"))
     smtp_user = os.environ.get("SMTP_USER")
@@ -244,35 +286,52 @@ def send_card_email(to_email, child, card_image_path, card_number):
     from_email = os.environ.get("FROM_EMAIL", smtp_user)
 
     if not (smtp_host and smtp_user and smtp_password):
-        print("⚠️ SMTP not configured – skipping email")
-        return
+        print("⚠️ SMTP not fully configured – skipping email send.")
+        return False
 
     msg = EmailMessage()
     msg["Subject"] = "Radcliffe Football Club Membership Card"
     msg["From"] = from_email
     msg["To"] = to_email
 
-    msg.set_content(f"""
-Hi,
+    body = f"""Hi,
 
 Your child's membership card has been approved.
 
 Child: {child.full_name}
 Card number: {card_number}
 
-Attached is your card.
+Attached is the digital card. You can print it or show it on your phone at the turnstile.
 
+Thanks,
 Radcliffe Football Club
-""")
+"""
+    msg.set_content(body)
 
-    with open(card_image_path, "rb") as f:
-        msg.add_attachment(f.read(), maintype="image", subtype="png", filename=os.path.basename(card_image_path))
+    try:
+        with open(card_image_path, "rb") as f:
+            img_data = f.read()
+        msg.add_attachment(
+            img_data,
+            maintype="image",
+            subtype="png",
+            filename=os.path.basename(card_image_path),
+        )
+    except Exception as e:
+        print(f"⚠️ Could not attach card image: {e}")
+        return False
 
-    server = smtplib.SMTP(smtp_host, smtp_port)
-    server.starttls()
-    server.login(smtp_user, smtp_password)
-    server.send_message(msg)
-    server.quit()
+    try:
+        # Short timeout so Render's worker doesn't hang forever
+        with smtplib.SMTP(smtp_host, smtp_port, timeout=8) as server:
+            server.starttls()
+            server.login(smtp_user, smtp_password)
+            server.send_message(msg)
+        print(f"✅ Sent card email to {to_email}")
+        return True
+    except Exception as e:
+        print(f"⚠️ Error sending card email: {e}")
+        return False
 
 
 # -------------------
@@ -302,7 +361,7 @@ def register():
         user.set_password(form.password.data)
         db.session.add(user)
         db.session.commit()
-        flash("Account created.", "success")
+        flash("Account created. Please log in.", "success")
         return redirect(url_for("login"))
     return render_template("register.html", form=form)
 
@@ -317,7 +376,7 @@ def login():
         if user and user.check_password(form.password.data):
             login_user(user)
             return redirect(url_for("dashboard"))
-        flash("Invalid login.", "danger")
+        flash("Invalid email or password.", "danger")
     return render_template("login.html", form=form)
 
 
@@ -359,23 +418,26 @@ def apply():
         db.session.add(application)
         db.session.commit()
 
-        flash("Application submitted!", "success")
+        flash("Application submitted. You will be notified once approved.", "success")
         return redirect(url_for("dashboard"))
+
     return render_template("apply.html", form=form)
 
 
 # -------------------
-# Admin
+# Admin routes
 # -------------------
 
 def admin_required(func):
     from functools import wraps
+
     @wraps(func)
     def wrapper(*args, **kwargs):
         if not current_user.is_authenticated or not current_user.is_admin:
-            flash("Admins only.", "danger")
+            flash("Admin access only.", "danger")
             return redirect(url_for("login"))
         return func(*args, **kwargs)
+
     return wrapper
 
 
@@ -385,6 +447,7 @@ def admin_required(func):
 def admin_applications():
     pending = Application.query.filter_by(status="pending").all()
     return render_template("admin_applications.html", applications=pending)
+
 
 @app.route("/admin/application/<int:app_id>", methods=["GET", "POST"])
 @login_required
@@ -399,7 +462,7 @@ def admin_application_detail(app_id):
         if action == "approve":
             application.status = "approved"
 
-            # Generate card
+            # Generate card number & image
             card_number = f"RJ-{application.id:06d}"
             photo_path = os.path.join(app.config["UPLOAD_FOLDER"], application.photo_filename)
             card_image_filename = generate_card_image(
@@ -409,6 +472,7 @@ def admin_application_detail(app_id):
                 card_number,
             )
 
+            # Create Card record
             card = Card(
                 child_id=child.id,
                 card_number=card_number,
@@ -417,8 +481,15 @@ def admin_application_detail(app_id):
             db.session.add(card)
             db.session.commit()
 
-            # NOTE: Email sending disabled on Render to avoid timeouts
-            flash("Application approved and card generated.", "success")
+            parent_email = child.parent.email
+            card_image_path = os.path.join(app.config["CARD_FOLDER"], card_image_filename)
+
+            email_ok = send_card_email(parent_email, child, card_image_path, card_number)
+            if email_ok:
+                flash("Application approved, card generated and emailed to parent.", "success")
+            else:
+                flash("Application approved and card generated, but email could not be sent.", "warning")
+
             return redirect(url_for("admin_applications"))
 
         elif action == "reject":
@@ -428,8 +499,6 @@ def admin_application_detail(app_id):
             return redirect(url_for("admin_applications"))
 
     return render_template("admin_application_detail.html", application=application, child=child)
-
-
 
 
 @app.route("/uploads/<filename>")
