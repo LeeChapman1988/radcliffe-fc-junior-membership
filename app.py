@@ -1,6 +1,7 @@
 import os
 import secrets
 from datetime import datetime
+import threading  # NEW: for async email
 
 from flask import (
     Flask, render_template, redirect, url_for, flash,
@@ -65,6 +66,10 @@ def create_app():
 db = SQLAlchemy()
 login_manager = LoginManager()
 login_manager.login_view = "login"
+
+# Email feature flags
+ENABLE_EMAIL = os.environ.get("ENABLE_EMAIL", "0") == "1"
+EMAIL_MODE = os.environ.get("EMAIL_MODE", "sync")  # "sync" or "async"
 
 # -------------------
 # Models
@@ -198,7 +203,6 @@ def generate_card_image(child, photo_path, output_folder, card_number):
         width=border_width,
     )
 
-    # Layout areas
     margin = 40
 
     # Photo area (left)
@@ -210,7 +214,7 @@ def generate_card_image(child, photo_path, output_folder, card_number):
     except Exception as e:
         print(f"⚠️ Could not load photo at {photo_path}: {e}")
 
-    # QR code (bottom-right corner-ish)
+    # QR code (bottom-right)
     qr_size = 180
     qr_data = f"RFC|{child.full_name}|{card_number}"
     qr_img = qrcode.make(qr_data).resize((qr_size, qr_size))
@@ -269,13 +273,12 @@ def generate_card_image(child, photo_path, output_folder, card_number):
 def send_card_email(to_email, child, card_image_path, card_number):
     """
     Send the generated card to the parent by email as an attachment.
-    Uses basic SMTP settings from environment variables.
+    Uses SMTP settings from environment variables.
 
     Returns True if sent, False otherwise.
     """
 
-    # Feature flag – set ENABLE_EMAIL=1 on Render when ready
-    if os.environ.get("ENABLE_EMAIL", "0") != "1":
+    if not ENABLE_EMAIL:
         print("ℹ️ Email sending disabled via ENABLE_EMAIL env var.")
         return False
 
@@ -322,7 +325,7 @@ Radcliffe Football Club
         return False
 
     try:
-        # Short timeout so Render's worker doesn't hang forever
+        # Short timeout so we don't hang too long
         with smtplib.SMTP(smtp_host, smtp_port, timeout=8) as server:
             server.starttls()
             server.login(smtp_user, smtp_password)
@@ -484,11 +487,22 @@ def admin_application_detail(app_id):
             parent_email = child.parent.email
             card_image_path = os.path.join(app.config["CARD_FOLDER"], card_image_filename)
 
-            email_ok = send_card_email(parent_email, child, card_image_path, card_number)
-            if email_ok:
-                flash("Application approved, card generated and emailed to parent.", "success")
+            # --- EMAIL HANDLING ---
+            if EMAIL_MODE == "sync":
+                email_ok = send_card_email(parent_email, child, card_image_path, card_number)
+                if email_ok:
+                    flash("Application approved, card generated and emailed to parent.", "success")
+                else:
+                    flash("Application approved and card generated, but email could not be sent.", "warning")
             else:
-                flash("Application approved and card generated, but email could not be sent.", "warning")
+                # async mode – don't block the request
+                def send_async():
+                    ok = send_card_email(parent_email, child, card_image_path, card_number)
+                    print(f"Async email result for {parent_email}: {ok}")
+
+                threading.Thread(target=send_async, daemon=True).start()
+                flash("Application approved and card generated. Email will be sent shortly.", "info")
+            # --- END EMAIL HANDLING ---
 
             return redirect(url_for("admin_applications"))
 

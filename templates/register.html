@@ -19,16 +19,16 @@
 
       <div class="mb-3">
         {{ form.password.label(class_="form-label") }}
-        {{ form.password(class_="form-control", placeholder="Enter a password (min 6 characters)") }}
+        {{ form.password(class_="form-control", placeholder="Create a password") }}
         {% for error in form.password.errors %}
           <div class="text-danger small">{{ error }}</div>
         {% endfor %}
       </div>
 
       <div class="mb-3">
-        {{ form.confirm_password.label(class_="form-label") }}
-        {{ form.confirm_password(class_="form-control", placeholder="Confirm your password") }}
-        {% for error in form.confirm_password.errors %}
+        {{ form.confirm.label(class_="form-label") }}
+        {{ form.confirm(class_="form-control", placeholder="Confirm your password") }}
+        {% for error in form.confirm.errors %}
           <div class="text-danger small">{{ error }}</div>
         {% endfor %}
       </div>
